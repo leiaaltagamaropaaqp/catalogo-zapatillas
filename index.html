@@ -75,27 +75,51 @@
     </div>
 
     <script>
-        const SHEET_ID = '1ojKX-Rl3l6Mxeaa0Uv4eemXGumfqpDCcRqVCBHtfDsI';
+        const SHEET_ID = '1ojKX-Rl3l6Mxeaa0Uv4eemXGumfqpDCcRqVCBHtfDsI'.trim(); // Limpiamos espacios
         const SHEET_NAME = 'Hoja1';
         const WHATSAPP = '51987840298';
 
-        let inventarioReal = [];
+        // Usamos una URL de respaldo por si el rango falla
+        const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
 
         async function iniciarApp() {
-            //const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
-            // Añadimos &range=A1:Z100 para asegurar que lea hasta la fila 100
-            const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}&range=A1:J50`;
+            console.log("Iniciando conexión con Google Sheets...");
             try {
                 const response = await fetch(url);
+                if (!response.ok) throw new Error("No se pudo conectar con Google");
+                
                 const text = await response.text();
-                const rawData = JSON.parse(text.substring(47).slice(0, -2));
-                inventarioReal = rawData.table.rows;
+                
+                // Limpieza manual del JSON (más segura)
+                const inicio = text.indexOf('{');
+                const fin = text.lastIndexOf('}');
+                const jsonLimpio = JSON.parse(text.substring(inicio, fin + 1));
+                
+                inventarioReal = jsonLimpio.table.rows;
+                
+                console.log("Datos recibidos:", inventarioReal.length, "filas");
+
+                if (inventarioReal.length === 0) {
+                    document.getElementById('loading').innerHTML = "El Excel parece estar vacío.";
+                    return;
+                }
+
                 document.getElementById('loading').style.display = 'none';
                 renderizar(inventarioReal);
             } catch (e) {
-                console.error("Error:", e);
+                console.error("Error en la carga:", e);
+                document.getElementById('loading').innerHTML = `
+                    <div class="text-red-500 p-4">
+                        <i class="fa fa-exclamation-triangle text-2xl mb-2"></i><br>
+                        <b>Error de Conexión</b><br>
+                        <small>Asegúrate que el Google Sheet esté compartido como PUBLICO.</small><br>
+                        <button onclick="location.reload()" class="mt-4 bg-gray-800 text-white px-4 py-2 rounded-lg text-xs">Reintentar</button>
+                    </div>
+                `;
             }
         }
+
+        
 function renderizar(datos) {
     const container = document.getElementById('contenedor-principal');
     container.innerHTML = '';
