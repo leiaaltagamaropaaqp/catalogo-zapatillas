@@ -75,50 +75,126 @@
     </div>
 
     <script>
-        const SHEET_ID = '1ojKX-Rl3l6Mxeaa0Uv4eemXGumfqpDCcRqVCBHtfDsI'.trim(); // Limpiamos espacios
-        const SHEET_NAME = 'Hoja1';
-        const WHATSAPP = '51987840298';
+      <script>
+    // CONFIGURACIÓN
+    const SHEET_ID = '1ojKX-Rl3l6Mxeaa0Uv4eemXGumfqpDCcRqVCBHtfDsI'.trim();
+    const SHEET_NAME = 'Hoja1';
+    const WHATSAPP = '51987840298';
 
-        // Usamos una URL de respaldo por si el rango falla
-        const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+    // Usamos la URL con el rango ampliado para asegurar los 20 productos
+    const URL_FINAL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}&range=A1:J50`;
 
-        async function iniciarApp() {
-            console.log("Iniciando conexión con Google Sheets...");
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("No se pudo conectar con Google");
-                
-                const text = await response.text();
-                
-                // Limpieza manual del JSON (más segura)
-                const inicio = text.indexOf('{');
-                const fin = text.lastIndexOf('}');
-                const jsonLimpio = JSON.parse(text.substring(inicio, fin + 1));
-                
-                inventarioReal = jsonLimpio.table.rows;
-                
-                console.log("Datos recibidos:", inventarioReal.length, "filas");
+    let inventarioReal = [];
 
-                if (inventarioReal.length === 0) {
-                    document.getElementById('loading').innerHTML = "El Excel parece estar vacío.";
-                    return;
-                }
+    async function iniciarApp() {
+        console.log("Iniciando conexión con Google Sheets...");
+        try {
+            // CORRECCIÓN: Usamos URL_FINAL que está definida arriba
+            const response = await fetch(URL_FINAL);
+            if (!response.ok) throw new Error("No se pudo conectar con Google");
+            
+            const text = await response.text();
+            
+            // Limpieza del JSON que envía Google
+            const inicio = text.indexOf('{');
+            const fin = text.lastIndexOf('}');
+            const jsonLimpio = JSON.parse(text.substring(inicio, fin + 1));
+            
+            inventarioReal = jsonLimpio.table.rows;
+            
+            console.log("Datos recibidos correctamente:", inventarioReal.length, "filas");
 
-                document.getElementById('loading').style.display = 'none';
-                renderizar(inventarioReal);
-            } catch (e) {
-                console.error("Error en la carga:", e);
-                document.getElementById('loading').innerHTML = `
-                    <div class="text-red-500 p-4">
-                        <i class="fa fa-exclamation-triangle text-2xl mb-2"></i><br>
-                        <b>Error de Conexión</b><br>
-                        <small>Asegúrate que el Google Sheet esté compartido como PUBLICO.</small><br>
-                        <button onclick="location.reload()" class="mt-4 bg-gray-800 text-white px-4 py-2 rounded-lg text-xs">Reintentar</button>
-                    </div>
-                `;
+            if (inventarioReal.length === 0) {
+                document.getElementById('loading').innerHTML = "El Excel parece estar vacío o mal configurado.";
+                return;
             }
-        }
 
+            // Ocultamos el cargador y dibujamos la vitrina
+            document.getElementById('loading').style.display = 'none';
+            renderizar(inventarioReal);
+
+        } catch (e) {
+            console.error("Error detallado:", e);
+            document.getElementById('loading').innerHTML = `
+                <div class="text-red-500 p-4">
+                    <i class="fa fa-exclamation-triangle text-2xl mb-2"></i><br>
+                    <b>Error de Conexión</b><br>
+                    <small>${e.message}</small><br>
+                    <button onclick="location.reload()" class="mt-4 bg-black text-white px-6 py-2 rounded-full text-xs font-bold">REINTENTAR</button>
+                </div>
+            `;
+        }
+    }
+
+    function renderizar(datos) {
+        const container = document.getElementById('contenedor-principal');
+        container.innerHTML = '';
+
+        datos.forEach((fila, index) => {
+            // Imagen en Columna J (Índice 9)
+            const img = fila.c[9] ? fila.c[9].v : (fila.c[8] ? fila.c[8].v : null);
+            
+            // Si no hay link de imagen, ignoramos la fila
+            if (!img || typeof img !== 'string' || !img.startsWith('http')) return;
+
+            const p = {
+                marca: fila.c[0]?.v || '',
+                color: fila.c[2]?.v || 'Multicolor',
+                precio: fila.c[4]?.v || 'Consultar',
+                tallas: fila.c[5]?.v || 'Variadas',
+                nombre: fila.c[6]?.v || 'Zapatilla Premium',
+                foto: img
+            };
+
+            const card = document.createElement('div');
+            card.className = "bg-white p-4 rounded-3xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-xl transition-all";
+            card.onclick = () => abrirDetalle(p);
+            
+            card.innerHTML = `
+                <div class="relative mb-4">
+                    <img src="${p.foto}" class="img-vitrina rounded-2xl" loading="lazy" onerror="this.src='https://via.placeholder.com/300?text=Error+Imagen'">
+                </div>
+                <div class="text-center">
+                    <h3 class="text-[11px] md:text-sm font-bold text-gray-800 uppercase truncate mb-1">${p.nombre}</h3>
+                    <p class="text-blue-700 font-black text-lg md:text-2xl italic">S/ ${p.precio}</p>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function abrirDetalle(p) {
+        document.getElementById('detalleImg').src = p.foto;
+        document.getElementById('detalleNombre').innerText = p.nombre;
+        document.getElementById('detalleColor').innerText = p.color;
+        document.getElementById('detalleTallas').innerText = p.tallas;
+        document.getElementById('detallePrecio').innerText = p.precio;
+        
+        const textoWA = `¡Hola Leia Alta Gama! 👋\nMe interesa este modelo:\n*${p.nombre}*\nColor: ${p.color}\nTallas: ${p.tallas}\nPrecio: S/ ${p.precio}`;
+        document.getElementById('detalleLinkWA').href = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(textoWA)}`;
+        
+        document.getElementById('pantallaDetalle').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function cerrarDetalle() {
+        document.getElementById('pantallaDetalle').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    // Buscador
+    document.getElementById('buscador').addEventListener('input', (e) => {
+        const t = e.target.value.toLowerCase();
+        const filtrados = inventarioReal.filter(f => {
+            const meta = `${f.c[6]?.v} ${f.c[0]?.v} ${f.c[5]?.v} ${f.c[2]?.v}`.toLowerCase();
+            return meta.includes(t);
+        });
+        renderizar(filtrados);
+    });
+
+    // Arrancamos la App
+    iniciarApp();
+</script>
         
 function renderizar(datos) {
     const container = document.getElementById('contenedor-principal');
