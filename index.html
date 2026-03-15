@@ -72,9 +72,12 @@
             contenedor.innerHTML = '';
 
             datos.forEach(fila => {
-                const nombre = fila.c[0] ? fila.c[1].v : 'Modelo sin nombre';
-                const fotoUrl = fila.c[1] ? fila.c[8].v : 'https://via.placeholder.com/300';
-                const precio = fila.c[2] ? fila.c[2].v : '---';
+                          // Dentro de tu datos.forEach
+            const nombre = fila.c[6] ? fila.c[6].v : 'Sin nombre'; // Columna G
+            const precio = fila.c[4] ? fila.c[4].v : '0';          // Columna E
+            const fotoUrl = fila.c[9] ? fila.c[9].v : '';          // Columna J (Link_Imagen)
+            const tallas = fila.c[5] ? fila.c[5].v : 'Consultar';  // Columna F
+            const color = fila.c[2] ? fila.c[2].v : '';            // Columna C
 
                 contenedor.innerHTML += `
                     <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col border border-gray-200">
