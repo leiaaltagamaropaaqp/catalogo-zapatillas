@@ -82,7 +82,9 @@
         let inventarioReal = [];
 
         async function iniciarApp() {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+            //const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+            // Añadimos &range=A1:Z100 para asegurar que lea hasta la fila 100
+            const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}&range=A1:Z100`;
             try {
                 const response = await fetch(url);
                 const text = await response.text();
