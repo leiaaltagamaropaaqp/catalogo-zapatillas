@@ -129,24 +129,31 @@
         }
 
         // 2. RENDERIZADO DE LA VITRINA PRINCIPAL
-        function renderizar(datos) {
+      function renderizar(datos) {
             const container = document.getElementById('contenedor-principal');
             container.innerHTML = '';
 
+            console.log("Iniciando renderizado de", datos.length, "filas recibidas.");
+
             datos.forEach((fila, index) => {
-                // Buscamos el link en Columna J (Índice 9) o Columna I (Índice 8)
+                // Capturamos lo que sea que haya en la columna J (índice 9)
                 const img = fila.c[9] ? fila.c[9].v : (fila.c[8] ? fila.c[8].v : null);
                 
-                // Si la fila no tiene link de imagen válido, la ignoramos
-                if (!img || typeof img !== 'string' || !img.startsWith('http')) return;
+                // LOG DE DIAGNÓSTICO: Esto aparecerá en tu consola (F12)
+                console.log(`Fila ${index + 1}: Nombre -> ${fila.c[6]?.v} | Imagen -> ${img}`);
+
+                // Si no hay imagen, igual creamos un cuadro con un aviso (para saber que la fila existe)
+                const fotoFinal = (img && typeof img === 'string' && img.startsWith('http')) 
+                                  ? img 
+                                  : 'https://via.placeholder.com/300?text=Sin+Link+de+Imagen';
 
                 const p = {
                     marca: fila.c[0]?.v || '',
                     color: fila.c[2]?.v || 'Normal',
                     precio: fila.c[4]?.v || '0',
                     tallas: fila.c[5]?.v || 'S/T',
-                    nombre: fila.c[6]?.v || 'Zapatilla',
-                    foto: img
+                    nombre: fila.c[6]?.v || `Producto fila ${index + 1}`,
+                    foto: fotoFinal
                 };
 
                 const card = document.createElement('div');
@@ -155,11 +162,11 @@
                 
                 card.innerHTML = `
                     <div class="relative mb-3 overflow-hidden rounded-2xl">
-                        <img src="${p.foto}" class="img-vitrina" loading="lazy" onerror="this.src='https://via.placeholder.com/300?text=Imagen+No+Disponible'">
+                        <img src="${p.foto}" class="img-vitrina" loading="lazy">
                     </div>
                     <div class="text-center px-1">
                         <h3 class="text-[10px] md:text-sm font-bold text-gray-700 uppercase truncate mb-1">${p.nombre}</h3>
-                        <p class="text-blue-700 font-black text-base md:text-2xl">S/ ${p.precio}</p>
+                        <p class="text-blue-700 font-black text-base md:text-2xl italic">S/ ${p.precio}</p>
                     </div>
                 `;
                 container.appendChild(card);
