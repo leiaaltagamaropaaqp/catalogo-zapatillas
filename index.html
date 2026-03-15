@@ -96,37 +96,51 @@
                 console.error("Error:", e);
             }
         }
+function renderizar(datos) {
+    const container = document.getElementById('contenedor-principal');
+    container.innerHTML = '';
 
-        function renderizar(datos) {
-            const container = document.getElementById('contenedor-principal');
-            container.innerHTML = '';
+    console.log("Intentando renderizar total de filas:", datos.length);
 
-            datos.forEach((fila) => {
-                const img = fila.c[9]?.v || fila.c[8]?.v; // Columna J o I
-                if (!img || !img.startsWith('http')) return;
+    datos.forEach((fila, index) => {
+        // Obtenemos el link de la imagen (Columna J es índice 9)
+        // Usamos un método más robusto para extraer el valor
+        const imgRaw = fila.c[9] ? (fila.c[9].v || "") : "";
+        
+        // Si la celda existe pero no tiene el link, intentamos con la Columna I (índice 8)
+        const imagenFinal = imgRaw.toString().startsWith('http') ? imgRaw : 
+                           (fila.c[8] && fila.c[8].v && fila.c[8].v.toString().startsWith('http') ? fila.c[8].v : null);
 
-                const p = {
-                    nombre: fila.c[6]?.v || 'Zapatilla',
-                    precio: fila.c[4]?.v || '0',
-                    foto: img,
-                    tallas: fila.c[5]?.v || 'Variadas',
-                    color: fila.c[2]?.v || 'Multicolor'
-                };
-
-                const card = document.createElement('div');
-                card.className = "bg-white p-4 rounded-3xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-lg transition-all";
-                card.onclick = () => abrirDetalle(p);
-                card.innerHTML = `
-                    <img src="${p.foto}" class="img-vitrina mb-4" loading="lazy">
-                    <div class="text-center">
-                        <h3 class="text-[11px] md:text-sm font-bold text-gray-800 uppercase truncate mb-1">${p.nombre}</h3>
-                        <p class="text-blue-700 font-black text-lg">S/ ${p.precio}</p>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+        // Si después de buscar no hay imagen, saltamos esta fila
+        if (!imagenFinal) {
+            console.warn(`Fila ${index + 1} saltada: No se encontró link de imagen válido.`);
+            return;
         }
 
+        const p = {
+            nombre: (fila.c[6] && fila.c[6].v) ? fila.c[6].v : 'Zapatilla ' + (index + 1),
+            precio: (fila.c[4] && fila.c[4].v) ? fila.c[4].v : 'Consultar',
+            foto: imagenFinal,
+            tallas: (fila.c[5] && fila.c[5].v) ? fila.c[5].v : 'S/T',
+            color: (fila.c[2] && fila.c[2].v) ? fila.c[2].v : 'Ver detalle'
+        };
+
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-3xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-lg transition-all";
+        card.onclick = () => abrirDetalle(p);
+        card.innerHTML = `
+            <img src="${p.foto}" class="img-vitrina mb-4" loading="lazy">
+            <div class="text-center">
+                <h3 class="text-[11px] md:text-sm font-bold text-gray-800 uppercase truncate mb-1">${p.nombre}</h3>
+                <p class="text-blue-700 font-black text-lg">S/ ${p.precio}</p>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+
+    
         function abrirDetalle(p) {
             document.getElementById('detalleImg').src = p.foto;
             document.getElementById('detalleNombre').innerText = p.nombre;
