@@ -1,113 +1,134 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <link rel="icon" href="https://res.cloudinary.com/leia-altagama/image/upload/v1773363458/Adidas_Duramo10Speed_RosadoPastel_tfqbvw.jpg">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo de Zapatillas Perú 2026</title>
+    <title>Leia Alta Gama - Catálogo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Estilo para que las imágenes mantengan su proporción sin cortarse */
-        .img-zapatilla { object-fit: contain; height: 180px; width: 100%; }
+        .img-card { object-fit: contain; height: 200px; width: 100%; transition: transform 0.3s; }
+        .img-card:hover { transform: scale(1.05); }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); backdrop-filter: blur(5px); }
+        .modal-content { animation: zoom 0.3s; }
+        @keyframes zoom { from {transform:scale(0)} to {transform:scale(1)} }
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-50">
 
-    <header class="bg-black text-white p-4 sticky top-0 z-50 shadow-xl">
+    <header class="bg-black text-white p-4 sticky top-0 z-50 shadow-lg">
         <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <h1 class="text-2xl font-black italic tracking-tighter text-yellow-400">LEIA ALTA GAMA 👟</h1>
-            <div class="relative w-full md:w-1/3">
-                <input type="text" id="buscador" placeholder="Buscar modelo o marca..." 
-                    class="w-full p-2 pl-10 rounded-full text-black focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                <i class="fa fa-search absolute left-3 top-3 text-gray-400"></i>
-            </div>
+            <input type="text" id="buscador" placeholder="Buscar por marca, modelo o talla..." 
+                class="w-full md:w-1/3 p-2 rounded-full text-black focus:ring-2 focus:ring-yellow-400 outline-none">
         </div>
     </header>
 
-    <div class="bg-blue-600 text-white text-center py-2 text-sm font-bold uppercase tracking-widest">
-        🇵🇪 Envíos garantizados a Lima, Arequipa y todo el Perú
+    <div class="bg-red-600 text-white text-center py-2 text-xs font-bold uppercase tracking-widest">
+        🇵🇪 Envíos a Lima, Arequipa y todo el Perú
     </div>
 
-    <main class="max-w-6xl mx-auto p-4 md:p-6">
-        <div id="lista-zapatillas" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            <div class="col-span-full text-center py-20">
-                <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-                <p class="text-gray-500 font-medium">Cargando catálogo actualizado...</p>
-            </div>
+    <main class="max-w-7xl mx-auto p-4 md:p-8">
+        <div id="contenedor" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <p class="col-span-full text-center py-20 text-gray-500">Cargando catálogo inteligente...</p>
         </div>
     </main>
 
-    <script>
-        // ==========================================
-        // CONFIGURACIÓN: CAMBIA ESTOS DATOS
-        // ==========================================
-        const SHEET_ID = '1ojKX-Rl3l6Mxeaa0Uv4eemXGumfqpDCcRqVCBHtfDsI'; 
-        const SHEET_NAME = 'Hoja1'; // Nombre de la pestaña en tu Excel
-        const MI_WHATSAPP = '51987840298'; // Tu número con el 51 adelante
+    <div id="modalDetalle" class="modal flex items-center justify-center p-4">
+        <span class="absolute top-5 right-5 text-white text-4xl cursor-pointer" onclick="cerrarModal()">&times;</span>
         
-        // URL de la API de Google Sheets
-        const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}&range=A1:I50`;
+        <div class="bg-white rounded-3xl max-w-4xl w-full overflow-hidden flex flex-col md:flex-row modal-content shadow-2xl">
+            <div class="md:w-1/2 bg-gray-100 p-6 flex items-center justify-center">
+                <img id="modalImg" src="" class="max-h-[400px] object-contain">
+            </div>
+            
+            <div class="md:w-1/2 p-8 flex flex-col justify-center">
+                <h2 id="modalNombre" class="text-3xl font-black text-gray-800 uppercase leading-none mb-4"></h2>
+                <div class="space-y-3 mb-6">
+                    <p class="text-gray-600 font-medium">Color: <span id="modalColor" class="text-black italic"></span></p>
+                    <p class="text-gray-600 font-medium text-lg">Tallas: <span id="modalTallas" class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-bold"></span></p>
+                    <p class="text-4xl font-black text-blue-700">S/ <span id="modalPrecio"></span></p>
+                </div>
+                <a id="btnWhatsapp" href="#" target="_blank" class="bg-green-600 hover:bg-green-700 text-white text-center py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all">
+                    <i class="fab fa-whatsapp text-2xl"></i> CONSULTAR POR WHATSAPP
+                </a>
+                <p class="text-gray-400 text-[10px] text-center mt-4 uppercase tracking-tighter">Envío seguro a todo el país</p>
+            </div>
+        </div>
+    </div>
 
-        let baseDeDatos = [];
+    <script>
+        const SHEET_ID = '1ojKX-Rl3l6Mxeaa0Uv4eemXGumfqpDCcRqVCBHtfDsI'; // <--- PEGA TU ID AQUÍ
+        const SHEET_NAME = 'Hoja1';
+        const MI_NUMERO = '51987840298'; // <--- TU WHATSAPP
+        
+        const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
 
-        // Función para conectar con Google Sheets
+        let inventario = [];
+
         fetch(URL)
             .then(res => res.text())
             .then(data => {
-                const temp = data.substring(47).slice(0, -2);
-                const json = JSON.parse(temp);
-                baseDeDatos = json.table.rows;
-                console.log("Total de filas detectadas:", baseDeDatos.length);
-                renderizar(baseDeDatos);
-            })
-            .catch(err => {
-                console.error("Error cargando datos:", err);
-                document.getElementById('lista-zapatillas').innerHTML = "<p class='col-span-full text-center text-red-500'>Error al conectar con Google Sheets. Revisa el ID y los permisos.</p>";
+                const json = JSON.parse(data.substring(47).slice(0, -2));
+                inventario = json.table.rows;
+                mostrarProductos(inventario);
             });
 
-        // Función para dibujar las zapatillas en la pantalla
-        function renderizar(datos) {
-            const contenedor = document.getElementById('lista-zapatillas');
-            contenedor.innerHTML = '';
+        function mostrarProductos(lista) {
+            const container = document.getElementById('contenedor');
+            container.innerHTML = '';
 
-            datos.forEach(fila => {
-                          // Dentro de tu datos.forEach
-            const nombre = fila.c[6] ? fila.c[6].v : 'Sin nombre'; // Columna G
-            const precio = fila.c[4] ? fila.c[4].v : '0';          // Columna E
-            const fotoUrl = fila.c[9] ? fila.c[9].v : '';          // Columna J (Link_Imagen)
-            const tallas = fila.c[5] ? fila.c[5].v : 'Consultar';  // Columna F
-            const color = fila.c[2] ? fila.c[2].v : '';            // Columna C
+            lista.forEach(fila => {
+                if(!fila.c[9]) return; // Si no hay imagen, saltar
 
-                contenedor.innerHTML += `
-                    <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col border border-gray-200">
-                        <div class="p-2 bg-gray-50">
-                            <img src="${fotoUrl}" alt="${nombre}" class="img-zapatilla rounded-lg">
+                const d = {
+                    nombre: fila.c[6]?.v || "Sin Nombre",
+                    precio: fila.c[4]?.v || "0.00",
+                    foto: fila.c[9]?.v || "",
+                    tallas: fila.c[5]?.v || "Consultar",
+                    color: fila.c[2]?.v || "Estándar"
+                };
+
+                container.innerHTML += `
+                    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col cursor-pointer hover:shadow-2xl transition-all" onclick='verDetalle(${JSON.stringify(d)})'>
+                        <div class="p-4">
+                            <img src="${d.foto}" class="img-card rounded-2xl">
                         </div>
-                        <div class="p-4 flex flex-col flex-grow">
-                            <h2 class="text-sm md:text-base font-bold text-gray-800 uppercase leading-tight mb-2">${nombre}</h2>
-                            <div class="mt-auto">
-                                <p class="text-xl font-black text-blue-700 mb-3">S/ ${precio}</p>
-                                <a href="https://wa.me/${MI_WHATSAPP}?text=Hola! Me interesa el modelo: ${nombre}" 
-                                   target="_blank"
-                                   class="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm transition-colors">
-                                    <i class="fab fa-whatsapp text-lg"></i> CONSULTAR
-                                </a>
-                            </div>
+                        <div class="p-4 pt-0 text-center">
+                            <h3 class="font-bold text-gray-800 text-sm truncate uppercase">${d.nombre}</h3>
+                            <p class="text-blue-700 font-black text-lg">S/ ${d.precio}</p>
+                            <p class="text-gray-400 text-[10px]">Tallas: ${d.tallas}</p>
                         </div>
                     </div>
                 `;
             });
         }
 
-        // Lógica del buscador
+        function verDetalle(prod) {
+            document.getElementById('modalImg').src = prod.foto;
+            document.getElementById('modalNombre').innerText = prod.nombre;
+            document.getElementById('modalPrecio').innerText = prod.precio;
+            document.getElementById('modalColor').innerText = prod.color;
+            document.getElementById('modalTallas').innerText = prod.tallas;
+            
+            const msj = `Hola! Vengo de tu catálogo web. Me interesa este modelo:\n- ${prod.nombre}\n- Tallas: ${prod.tallas}\n- Color: ${prod.color}`;
+            document.getElementById('btnWhatsapp').href = `https://wa.me/${MI_NUMERO}?text=${encodeURIComponent(msj)}`;
+            
+            document.getElementById('modalDetalle').style.display = "flex";
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalDetalle').style.display = "none";
+        }
+
+        // Buscador
         document.getElementById('buscador').addEventListener('input', (e) => {
-            const termino = e.target.value.toLowerCase();
-            const filtrados = baseDeDatos.filter(fila => {
-                const nombre = fila.c[0] ? fila.c[0].v.toLowerCase() : '';
-                return nombre.includes(termino);
+            const term = e.target.value.toLowerCase();
+            const filtrados = inventario.filter(f => {
+                const txt = (f.c[6]?.v + " " + f.c[0]?.v + " " + f.c[5]?.v).toLowerCase();
+                return txt.includes(term);
             });
-            renderizar(filtrados);
+            mostrarProductos(filtrados);
         });
     </script>
 </body>
