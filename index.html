@@ -86,126 +86,92 @@
         </div>
     </div>
 
-    <script>
-        // CONFIGURACIÓN DEL SISTEMA
-        const SHEET_ID = '1ojKX-Rl3l6Mxeaa0Uv4eemXGumfqpDCcRqVCBHtfDsI';
-        const SHEET_NAME = 'Hoja1';
-        const WHATSAPP = '51987840298';
-        
-        // URL con rango forzado para que cargue los 20 productos (A1 hasta J50)
-        const URL_FINAL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}&range=A1:J50`;
+<script>
+    const SHEET_ID = '1ojKX-Rl3l6Mxeaa0Uv4eemXGumfqpDCcRqVCBHtfDsI';
+    const SHEET_NAME = 'Hoja1';
+    const WHATSAPP = '51987840298';
+    
+    // Quitamos el rango y dejamos que traiga TODO lo que encuentre
+    const URL_FINAL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
 
-        let inventarioReal = [];
+    let inventarioReal = [];
 
-        // 1. CARGA DE DATOS DESDE GOOGLE SHEETS
-        async function iniciarApp() {
-            console.log("Iniciando conexión con Google Sheets...");
-            try {
-                const response = await fetch(URL_FINAL);
-                if (!response.ok) throw new Error("No se pudo conectar con el servidor de Google");
-                
-                const text = await response.text();
-                // Limpiar la respuesta JSONP de Google
-                const inicio = text.indexOf('{');
-                const fin = text.lastIndexOf('}');
-                const jsonLimpio = JSON.parse(text.substring(inicio, fin + 1));
-                
-                inventarioReal = jsonLimpio.table.rows;
-                console.log("Productos recibidos:", inventarioReal.length);
+    async function iniciarApp() {
+        try {
+            const response = await fetch(URL_FINAL);
+            const text = await response.text();
+            const jsonLimpio = JSON.parse(text.substring(47).slice(0, -2));
+            
+            inventarioReal = jsonLimpio.table.rows;
+            
+            // DIAGNÓSTICO CLAVE
+            console.log("TOTAL DE FILAS RECIBIDAS DE GOOGLE:", inventarioReal.length);
+            
+            document.getElementById('loading').style.display = 'none';
+            renderizar(inventarioReal);
+        } catch (e) {
+            console.error("Error:", e);
+        }
+    }
 
-                document.getElementById('loading').style.display = 'none';
-                renderizar(inventarioReal);
-            } catch (e) {
-                console.error("Error crítico:", e);
-                document.getElementById('loading').innerHTML = `
-                    <div class="text-red-500 p-4">
-                        <i class="fa fa-exclamation-triangle text-2xl mb-2"></i><br>
-                        <b>Error de Conexión</b><br>
-                        <small>${e.message}</small><br>
-                        <button onclick="location.reload()" class="mt-4 bg-black text-white px-6 py-2 rounded-full text-xs font-bold uppercase">Reintentar</button>
-                    </div>
-                `;
+    function renderizar(datos) {
+        const container = document.getElementById('contenedor-principal');
+        container.innerHTML = '';
+
+        datos.forEach((fila, index) => {
+            // Extraemos los datos con cuidado
+            // Marca(0), Color(2), Precio(4), Talla(5), Nombre(6), Link_Imagen(9)
+            
+            const nombre = fila.c[6]?.v || `Producto sin nombre (Fila ${index + 1})`;
+            const precio = fila.c[4]?.v || "0";
+            const talla = fila.c[5]?.v || "S/T";
+            const color = fila.c[2]?.v || "Varios";
+            
+            // Intentamos buscar la imagen en la 9 (J), si no en la 8 (I), si no en la 7 (H)
+            let foto = "";
+            if (fila.c[9]?.v) foto = fila.c[9].v;
+            else if (fila.c[8]?.v) foto = fila.c[8].v;
+            else if (fila.c[7]?.v) foto = fila.c[7].v;
+
+            // Si de plano no hay link, ponemos un placeholder para NO saltar la fila
+            if (!foto || typeof foto !== 'string' || !foto.startsWith('http')) {
+                foto = "https://via.placeholder.com/400x400?text=Falta+Link+Imagen";
             }
-        }
 
-        // 2. RENDERIZADO DE LA VITRINA PRINCIPAL
-      function renderizar(datos) {
-            const container = document.getElementById('contenedor-principal');
-            container.innerHTML = '';
+            const p = { nombre, precio, foto, tallas: talla, color };
 
-            console.log("Iniciando renderizado de", datos.length, "filas recibidas.");
-
-            datos.forEach((fila, index) => {
-                // Capturamos lo que sea que haya en la columna J (índice 9)
-                const img = fila.c[9] ? fila.c[9].v : (fila.c[8] ? fila.c[8].v : null);
-                
-                // LOG DE DIAGNÓSTICO: Esto aparecerá en tu consola (F12)
-                console.log(`Fila ${index + 1}: Nombre -> ${fila.c[6]?.v} | Imagen -> ${img}`);
-
-                // Si no hay imagen, igual creamos un cuadro con un aviso (para saber que la fila existe)
-                const fotoFinal = (img && typeof img === 'string' && img.startsWith('http')) 
-                                  ? img 
-                                  : 'https://via.placeholder.com/300?text=Sin+Link+de+Imagen';
-
-                const p = {
-                    marca: fila.c[0]?.v || '',
-                    color: fila.c[2]?.v || 'Normal',
-                    precio: fila.c[4]?.v || '0',
-                    tallas: fila.c[5]?.v || 'S/T',
-                    nombre: fila.c[6]?.v || `Producto fila ${index + 1}`,
-                    foto: fotoFinal
-                };
-
-                const card = document.createElement('div');
-                card.className = "card-zapatilla bg-white p-3 md:p-4 rounded-3xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-xl transition-all";
-                card.onclick = () => abrirDetalle(p);
-                
-                card.innerHTML = `
-                    <div class="relative mb-3 overflow-hidden rounded-2xl">
-                        <img src="${p.foto}" class="img-vitrina" loading="lazy">
+            container.innerHTML += `
+                <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 cursor-pointer" onclick='verDetalle(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+                    <img src="${p.foto}" class="img-vitrina mb-4">
+                    <div class="text-center">
+                        <h3 class="text-[11px] font-bold uppercase truncate">${p.nombre}</h3>
+                        <p class="text-blue-700 font-black italic text-lg">S/ ${p.precio}</p>
                     </div>
-                    <div class="text-center px-1">
-                        <h3 class="text-[10px] md:text-sm font-bold text-gray-700 uppercase truncate mb-1">${p.nombre}</h3>
-                        <p class="text-blue-700 font-black text-base md:text-2xl italic">S/ ${p.precio}</p>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        // 3. LOGICA DEL MODAL DE DETALLE
-        function abrirDetalle(p) {
-            document.getElementById('detalleImg').src = p.foto;
-            document.getElementById('detalleNombre').innerText = p.nombre;
-            document.getElementById('detalleColor').innerText = p.color;
-            document.getElementById('detalleTallas').innerText = p.tallas;
-            document.getElementById('detallePrecio').innerText = p.precio;
-            
-            const textoWA = `¡Hola Leia Alta Gama! 👋\nMe interesa este modelo:\n*${p.nombre}*\nColor: ${p.color}\nTallas: ${p.tallas}\nPrecio: S/ ${p.precio}`;
-            document.getElementById('detalleLinkWA').href = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(textoWA)}`;
-            
-            document.getElementById('pantallaDetalle').style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // Evita scroll de fondo
-        }
-
-        function cerrarDetalle() {
-            document.getElementById('pantallaDetalle').style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-
-        // 4. BUSCADOR INTELIGENTE
-        document.getElementById('buscador').addEventListener('input', (e) => {
-            const t = e.target.value.toLowerCase();
-            const filtrados = inventarioReal.filter(f => {
-                // Busca en Nombre (G), Marca (A), Color (C) y Talla (F)
-                const meta = `${f.c[6]?.v} ${f.c[0]?.v} ${f.c[2]?.v} ${f.c[5]?.v}`.toLowerCase();
-                return meta.includes(t);
-            });
-            renderizar(filtrados);
+                </div>
+            `;
         });
+    }
 
-        // INICIAR AL CARGAR
-        iniciarApp();
-    </script>
+    function verDetalle(p) {
+        document.getElementById('detalleImg').src = p.foto;
+        document.getElementById('detalleNombre').innerText = p.nombre;
+        document.getElementById('detalleColor').innerText = p.color;
+        document.getElementById('detalleTallas').innerText = p.tallas;
+        document.getElementById('detallePrecio').innerText = p.precio;
+        
+        const textoWA = `Hola Leia Alta Gama! Me interesa: ${p.nombre}`;
+        document.getElementById('detalleLinkWA').href = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(textoWA)}`;
+        
+        document.getElementById('pantallaDetalle').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function cerrarDetalle() {
+        document.getElementById('pantallaDetalle').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    iniciarApp();
+</script>
 </body>
 </html>
