@@ -10,7 +10,6 @@
         .img-vitrina { height: 200px; width: 100%; object-fit: contain; background-color: #f9fafb; border-radius: 1rem; transition: transform 0.3s; }
         .card-zapatilla:hover .img-vitrina { transform: scale(1.05); }
         
-        /* Modal - Inicia oculto */
         #pantallaDetalle { 
             display: none; 
             position: fixed; 
@@ -55,14 +54,11 @@
     <div id="pantallaDetalle" onclick="cerrarDetalle()">
         <div class="bg-white rounded-3xl max-w-4xl w-full overflow-hidden flex flex-col md:flex-row relative modal-animacion shadow-2xl mx-4" onclick="event.stopPropagation()">
             <button class="absolute top-4 right-4 text-gray-400 hover:text-black text-3xl z-10 p-2" onclick="cerrarDetalle()">&times;</button>
-            
             <div class="md:w-1/2 bg-gray-50 p-6 flex items-center justify-center border-b md:border-b-0 md:border-r">
                 <img id="detalleImg" src="" class="max-h-[300px] md:max-h-[500px] w-full object-contain drop-shadow-2xl">
             </div>
-            
             <div class="md:w-1/2 p-8 flex flex-col justify-center">
                 <h2 id="detalleNombre" class="text-2xl md:text-4xl font-black text-gray-900 uppercase mb-4 leading-tight"></h2>
-                
                 <div class="space-y-4 mb-8">
                     <div class="flex justify-between items-center border-b pb-2">
                         <span class="text-gray-500 font-medium">Color:</span>
@@ -77,11 +73,9 @@
                         <p class="text-5xl font-black text-gray-900 leading-none">S/ <span id="detallePrecio"></span></p>
                     </div>
                 </div>
-
                 <a id="detalleLinkWA" href="#" target="_blank" class="bg-green-500 hover:bg-green-600 text-white text-center py-4 rounded-2xl font-bold text-xl flex items-center justify-center gap-3 shadow-lg transform active:scale-95 transition-all">
                     <i class="fab fa-whatsapp text-2xl"></i> PEDIR POR WHATSAPP
                 </a>
-                <p class="text-center text-[10px] text-gray-400 mt-4 uppercase font-semibold">Producto de alta gama - Stock limitado</p>
             </div>
         </div>
     </div>
@@ -90,8 +84,6 @@
     const SHEET_ID = '1ojKX-Rl3l6Mxeaa0Uv4eemXGumfqpDCcRqVCBHtfDsI';
     const SHEET_NAME = 'Hoja1';
     const WHATSAPP = '51987840298';
-    
-    // Quitamos el rango y dejamos que traiga TODO lo que encuentre
     const URL_FINAL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
 
     let inventarioReal = [];
@@ -101,12 +93,7 @@
             const response = await fetch(URL_FINAL);
             const text = await response.text();
             const jsonLimpio = JSON.parse(text.substring(47).slice(0, -2));
-            
             inventarioReal = jsonLimpio.table.rows;
-            
-            // DIAGNÓSTICO CLAVE
-            console.log("TOTAL DE FILAS RECIBIDAS DE GOOGLE:", inventarioReal.length);
-            
             document.getElementById('loading').style.display = 'none';
             renderizar(inventarioReal);
         } catch (e) {
@@ -119,38 +106,52 @@
         container.innerHTML = '';
 
         datos.forEach((fila, index) => {
-            // Extraemos los datos con cuidado
-            // Marca(0), Color(2), Precio(4), Talla(5), Nombre(6), Link_Imagen(9)
-            
-            const nombre = fila.c[6]?.v || `Producto sin nombre (Fila ${index + 1})`;
+            const nombre = fila.c[6]?.v || `Producto fila ${index + 1}`;
             const precio = fila.c[4]?.v || "0";
             const talla = fila.c[5]?.v || "S/T";
             const color = fila.c[2]?.v || "Varios";
+            const marca = fila.c[0]?.v || "";
             
-            // Intentamos buscar la imagen en la 9 (J), si no en la 8 (I), si no en la 7 (H)
-            let foto = "";
-            if (fila.c[9]?.v) foto = fila.c[9].v;
-            else if (fila.c[8]?.v) foto = fila.c[8].v;
-            else if (fila.c[7]?.v) foto = fila.c[7].v;
-
-            // Si de plano no hay link, ponemos un placeholder para NO saltar la fila
-            if (!foto || typeof foto !== 'string' || !foto.startsWith('http')) {
-                foto = "https://via.placeholder.com/400x400?text=Falta+Link+Imagen";
+            let foto = fila.c[9]?.v || fila.c[8]?.v || fila.c[7]?.v || "";
+            if (!foto.toString().startsWith('http')) {
+                foto = "https://via.placeholder.com/400x400?text=Falta+Imagen";
             }
 
-            const p = { nombre, precio, foto, tallas: talla, color };
+            const p = { nombre, precio, foto, tallas: talla, color, marca };
 
-            container.innerHTML += `
-                <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 cursor-pointer" onclick='verDetalle(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
-                    <img src="${p.foto}" class="img-vitrina mb-4">
-                    <div class="text-center">
-                        <h3 class="text-[11px] font-bold uppercase truncate">${p.nombre}</h3>
-                        <p class="text-blue-700 font-black italic text-lg">S/ ${p.precio}</p>
-                    </div>
+            const card = document.createElement('div');
+            card.className = "bg-white p-4 rounded-3xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-lg transition-all";
+            // Usamos una forma más segura de pasar el objeto a la función
+            card.onclick = () => verDetalle(p);
+            
+            card.innerHTML = `
+                <img src="${p.foto}" class="img-vitrina mb-4">
+                <div class="text-center">
+                    <h3 class="text-[11px] font-bold uppercase truncate">${p.nombre}</h3>
+                    <p class="text-blue-700 font-black italic text-lg">S/ ${p.precio}</p>
                 </div>
             `;
+            container.appendChild(card);
         });
     }
+
+    // --- NUEVO BUSCADOR CONECTADO ---
+    document.getElementById('buscador').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        
+        const filtrados = inventarioReal.filter(fila => {
+            // Extraemos los textos de las columnas clave
+            const nombre = (fila.c[6]?.v || "").toString().toLowerCase();
+            const marca = (fila.c[0]?.v || "").toString().toLowerCase();
+            const color = (fila.c[2]?.v || "").toString().toLowerCase();
+            const talla = (fila.c[5]?.v || "").toString().toLowerCase();
+
+            // Si el término está en cualquiera de estos campos, se queda
+            return nombre.includes(term) || marca.includes(term) || color.includes(term) || talla.includes(term);
+        });
+
+        renderizar(filtrados);
+    });
 
     function verDetalle(p) {
         document.getElementById('detalleImg').src = p.foto;
@@ -159,7 +160,7 @@
         document.getElementById('detalleTallas').innerText = p.tallas;
         document.getElementById('detallePrecio').innerText = p.precio;
         
-        const textoWA = `Hola Leia Alta Gama! Me interesa: ${p.nombre}`;
+        const textoWA = `¡Hola Leia Alta Gama! 👋 Me interesa:\n*${p.nombre}*\nColor: ${p.color}\nTallas: ${p.tallas}\nPrecio: S/ ${p.precio}`;
         document.getElementById('detalleLinkWA').href = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(textoWA)}`;
         
         document.getElementById('pantallaDetalle').style.display = 'flex';
